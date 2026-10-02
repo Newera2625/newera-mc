@@ -1,0 +1,10 @@
+{
+  "panelBase": "https://mc.newera2625.top",
+  "adminPort": 12501,
+  "authToken": "",
+  "reportIntervalSeconds": 5,
+  "enforceBind": true,
+  "kickMessage": "你还未绑定 SSO 账号，请先到 mc.newera2625.top 登录后绑定你的 MC 游戏名",
+  "bannedMessage": "你已被封禁",
+  "httpTimeoutMs": 6000
+}

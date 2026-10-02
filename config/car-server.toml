@@ -1,0 +1,238 @@
+	[machines.backmix_reactor]
+		# Default: 10000
+		# Range: 100 ~ 32767
+		energy_storage = 10000
+		# Default: 10
+		# Range: 1 ~ 32767
+		energy_usage = 10
+		# Default: 3000
+		# Range: 1000 ~ 32767
+		fluid_storage = 3000
+		# Default: 200
+		# Range: 10 ~ 32767
+		generating_time = 200
+		# Default: 100
+		# Range: 1 ~ 32767
+		mix_generation = 100
+		# Default: 50
+		# Range: 1 ~ 32767
+		methanol_usage = 50
+		# Default: 50
+		# Range: 1 ~ 32767
+		canola_usage = 50
+
+	[machines.blast_furnace]
+		# Default: 10000
+		# Range: 1000 ~ 32767
+		energy_storage = 10000
+		# Default: 3000
+		# Range: 1000 ~ 32767
+		fluid_storage = 3000
+
+	[machines.oil_mill]
+		# Default: 10000
+		# Range: 1000 ~ 32767
+		energy_storage = 10000
+		# Default: 3000
+		# Range: 1000 ~ 32767
+		fluid_storage = 3000
+
+	[machines.cable]
+		# Default: 256
+		# Range: 64 ~ 32767
+		transfer_rate = 256
+
+	[machines.dynamo]
+		# Default: 1000
+		# Range: 100 ~ 32767
+		energy_storage = 1000
+		# Default: 25
+		# Range: 1 ~ 32767
+		energy_generation = 25
+
+	[machines.fluid_extractor]
+		# Default: 25
+		# Range: 5 ~ 32767
+		drain_speed = 25
+
+	[machines.gas_station]
+		# Default: 5
+		# Range: 1 ~ 32767
+		transfer_rate = 5
+		#If it starts with '#' it is a tag
+		valid_fuels = ["#car:gas_station"]
+
+	[machines.generator]
+		# Default: 30000
+		# Range: 1000 ~ 32767
+		energy_storage = 30000
+		# Default: 3000
+		# Range: 1000 ~ 32767
+		fluid_storage = 3000
+		# Default: 500
+		# Range: 1 ~ 32767
+		energy_generation = 500
+		#If it starts with '#' it is a tag
+		valid_fuels = ["#car:generator"]
+
+	[machines.split_tank]
+		# Default: 3000
+		# Range: 1000 ~ 32767
+		fluid_storage = 3000
+		# Default: 800
+		# Range: 10 ~ 32767
+		generating_time = 800
+		# Default: 100
+		# Range: 1 ~ 32767
+		mix_usage = 100
+		# Default: 10
+		# Range: 1 ~ 32767
+		glycerin_generation = 10
+		# Default: 100
+		# Range: 1 ~ 32767
+		bio_diesel_generation = 100
+
+	[items.repair_kit]
+		# Default: 5.0
+		# Range: 0.10000000149011612 ~ 100.0
+		repair_amount = 5.0
+
+	[items.canister]
+		# Default: 100
+		# Range: 1 ~ 1000
+		max_fuel = 100
+
+[car]
+	#Whether the cars should collide with other entities (except cars)
+	collide_with_entities = false
+	#Whether the cars should damage other entities on collision
+	damage_entities = true
+	#Whether animals flee from the car when the horn is activted
+	horn_flee = true
+	#True if starting the car should use battery
+	use_battery = true
+	#The speed modifier for cars on non road blocks
+	# Default: 1.0
+	# Range: 0.001 ~ 10.0
+	offroad_speed_modifier = 1.0
+	#The speed modifier for cars on road blocks
+	#On road blocks are defined in the config section 'road_blocks'
+	# Default: 1.0
+	# Range: 0.001 ~ 10.0
+	onroad_speed_modifier = 1.0
+
+	[car.road_blocks]
+		#If it starts with '#' it is a tag
+		blocks = ["#car:drivable_blocks"]
+
+		[car.parts.small_tank]
+			# Default: 500
+			# Range: 100 ~ 100000
+			max_fuel = 500
+
+		[car.parts.medium_tank]
+			# Default: 1000
+			# Range: 100 ~ 100000
+			max_fuel = 1000
+
+		[car.parts.large_tank]
+			# Default: 1500
+			# Range: 100 ~ 100000
+			max_fuel = 1500
+
+		[car.parts.engine_6_cylinder]
+			# Default: 0.25
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.25
+			# Default: 0.04
+			# Range: 0.001 ~ 10.0
+			acceleration = 0.04
+			# Default: 0.75
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.75
+			# Default: 0.2
+			# Range: 0.001 ~ 10.0
+			max_reverse_speed = 0.2
+
+		[car.parts.engine_3_cylinder]
+			# Default: 0.5
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.5
+			# Default: 0.035
+			# Range: 0.001 ~ 10.0
+			acceleration = 0.035
+			# Default: 0.65
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.65
+			# Default: 0.2
+			# Range: 0.001 ~ 10.0
+			max_reverse_speed = 0.2
+
+		[car.parts.engine_truck]
+			# Default: 0.7
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.7
+			# Default: 0.032
+			# Range: 0.001 ~ 10.0
+			acceleration = 0.032
+			# Default: 0.6
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.6
+			# Default: 0.15
+			# Range: 0.001 ~ 10.0
+			max_reverse_speed = 0.15
+
+		[car.parts.body_big_wood]
+			# Default: 0.7
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.7
+			# Default: 0.95
+			# Range: 0.001 ~ 10.0
+			acceleration = 0.95
+			# Default: 0.85
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.85
+
+		[car.parts.body_wood]
+			# Default: 0.8
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.8
+			# Default: 1.0
+			# Range: 0.001 ~ 10.0
+			acceleration = 1.0
+			# Default: 0.9
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.9
+
+		[car.parts.body_sport]
+			# Default: 0.9
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.9
+			# Default: 1.0
+			# Range: 0.001 ~ 10.0
+			acceleration = 1.0
+			# Default: 1.0
+			# Range: 0.001 ~ 10.0
+			max_speed = 1.0
+
+		[car.parts.body_suv]
+			# Default: 0.6
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.6
+			# Default: 0.8
+			# Range: 0.001 ~ 10.0
+			acceleration = 0.8
+			# Default: 0.7
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.7
+
+		[car.parts.body_transporter]
+			# Default: 0.6
+			# Range: 0.001 ~ 10.0
+			fuel_efficiency = 0.6
+			# Default: 0.8
+			# Range: 0.001 ~ 10.0
+			acceleration = 0.8
+			# Default: 0.765
+			# Range: 0.001 ~ 10.0
+			max_speed = 0.765

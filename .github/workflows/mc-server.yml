@@ -1,0 +1,166 @@
+name: MC Server 24h
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 */6 * * *'
+
+concurrency:
+  group: mc-server
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  mc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Cache NeoForge libraries
+        uses: actions/cache@v4
+        with:
+          path: libraries
+          key: neoforge-21.1.233-libs
+
+      - name: 恢复存档
+        run: |
+          if [ -f world.tar.gz ]; then
+            tar xzf world.tar.gz
+            echo "OK 存档已恢复: $(du -sh world 2>/dev/null | cut -f1)"
+          else
+            echo "无存档，将生成新世界"
+          fi
+
+      - name: 安装并启动 MC
+        run: |
+          # 模组管理 token（newera-mc-auth 从环境变量读取）
+          export NEWERA_MC_AUTH_TOKEN="${{ secrets.MC_ADMIN_TOKEN }}"
+          echo "eula=true" > eula.txt
+          echo "-Xmx4G" > user_jvm_args.txt
+          echo "-Xms2G" >> user_jvm_args.txt
+          if [ ! -f run.sh ]; then
+            echo "安装 NeoForge 21.1.233..."
+            curl -sSL -o installer.jar "https://maven.neoforged.net/releases/net/neoforged/neoforge/21.1.233/neoforge-21.1.233-installer.jar"
+            java -jar installer.jar --installServer . || { echo "安装失败"; exit 1; }
+            echo "安装完成"
+          fi
+          chmod +x run.sh
+          nohup ./run.sh > console.log 2>&1 &
+          for i in $(seq 1 60); do
+            sleep 10
+            if grep -q 'Done (' logs/latest.log 2>/dev/null; then
+              echo "OK MC 启动完成"
+              break
+            fi
+            if ! pgrep -f "run.sh" > /dev/null && ! pgrep -f "server.jar" > /dev/null; then
+              echo "FAIL MC 进程退出！"
+              tail -80 logs/latest.log 2>/dev/null || tail -80 console.log
+              exit 1
+            fi
+            echo "启动中... $((i*10))s"
+          done
+          grep -q 'Done (' logs/latest.log 2>/dev/null || { echo "FAIL 启动超时"; tail -120 logs/latest.log 2>/dev/null; exit 1; }
+
+      - name: 启动 frpc 隧道
+        run: |
+          mkdir -p /tmp/frpc
+          cd /tmp/frpc
+          curl -sSL -o frpc.tar.gz "https://cf-v1.uapis.cn/download/ChmlFrp-0.51.2_251023_linux_amd64.tar.gz"
+          tar xzf frpc.tar.gz
+          FRPC_BIN=$(find . -name frpc -type f | head -1)
+          chmod +x "$FRPC_BIN"
+          nohup "$FRPC_BIN" -u ${{ secrets.FRPC_TOKEN }} -p 357350 > frpc.out 2>&1 &
+          for i in $(seq 1 12); do
+            sleep 5
+            grep -q "映射启动成功" frpc.out && break
+          done
+          cat frpc.out
+          grep -q "映射启动成功" frpc.out || { echo "FAIL 隧道启动失败"; exit 1; }
+          echo "OK 隧道已上线: x.newera2625.top:45079"
+
+      - name: 启动管理代理与 SSH 反代
+        run: |
+          # 1) 进程控制代理（监听 127.0.0.1:12502）
+          export MC_AGENT_TOKEN="${{ secrets.MC_ADMIN_TOKEN }}"
+          export MC_WORKDIR="$GITHUB_WORKSPACE"
+          nohup python3 scripts/mc-agent.py > agent.log 2>&1 &
+          # 2) SSH 反向隧道 -> VPS（暴露 12501=模组API, 12502=代理）
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.MC_SSH_KEY }}" > ~/.ssh/mc_tunnel
+          chmod 600 ~/.ssh/mc_tunnel
+          nohup ssh -i ~/.ssh/mc_tunnel -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N \
+            -R 12501:127.0.0.1:12501 -R 12502:127.0.0.1:12502 \
+            root@ip.newera2625.top > ssh_tunnel.log 2>&1 &
+          sleep 8
+          if ss -tln | grep -qE ':(12501|12502) '; then
+            echo "OK SSH 反代已建立: 12501/12502 -> VPS"
+          else
+            echo "WARN 隧道端口未就绪，查看日志："
+            tail -5 ssh_tunnel.log || true
+          fi
+          tail -3 agent.log || true
+
+      - name: 24h 轮换运行（10分钟备份 + 5h25m 交接）
+        run: |
+          set -u
+          cd "$GITHUB_WORKSPACE"
+          OPS=scripts/mc-ops.sh
+          chmod +x $OPS
+          # 管理通道 token（代理/模组共用，供自动重启时继承）
+          export MC_AGENT_TOKEN="${{ secrets.MC_ADMIN_TOKEN }}"
+          export MC_WORKDIR="$GITHUB_WORKSPACE"
+          export NEWERA_MC_AUTH_TOKEN="${{ secrets.MC_ADMIN_TOKEN }}"
+          bash $OPS backup_world || true
+          echo "OK 首次备份完成"
+          END=$((SECONDS + 19500))
+          NEXT_BACKUP=$((SECONDS + 600))
+          while [ $SECONDS -lt $END ]; do
+            if ! pgrep -f "run.sh" > /dev/null && ! pgrep -f "user_jvm_args" > /dev/null; then
+              echo "[$(date +%T)] WARN MC 挂了，自动重启..."
+              nohup ./run.sh >> console.log 2>&1 &
+            fi
+            if ! pgrep -f "frpc" > /dev/null; then
+              echo "[$(date +%T)] WARN frpc 挂了，自动重启..."
+              cd /tmp/frpc
+              nohup ./frpc -u ${{ secrets.FRPC_TOKEN }} -p 357350 >> frpc.out 2>&1 &
+              cd "$GITHUB_WORKSPACE"
+            fi
+            if ! pgrep -f "mc-agent.py" > /dev/null; then
+              echo "[$(date +%T)] WARN mc-agent 挂了，自动重启..."
+              nohup python3 scripts/mc-agent.py > agent.log 2>&1 &
+            fi
+            if ! pgrep -f "ssh.*mc_tunnel" > /dev/null; then
+              echo "[$(date +%T)] WARN SSH 反代断了，自动重连..."
+              nohup ssh -i ~/.ssh/mc_tunnel -o StrictHostKeyChecking=accept-new \
+                -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -N \
+                -R 12501:127.0.0.1:12501 -R 12502:127.0.0.1:12502 \
+                root@ip.newera2625.top > ssh_tunnel.log 2>&1 &
+            fi
+            if [ $SECONDS -ge $NEXT_BACKUP ]; then
+              bash $OPS backup_world || true
+              echo "[$(date +%T)] OK 存档备份完成"
+              NEXT_BACKUP=$((SECONDS + 600))
+            fi
+            sleep 30
+          done
+          echo "===== 交接时间到 ====="
+          bash $OPS backup_world || true
+          echo "OK 最终存档已上传"
+          curl -sS -X POST -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/workflows/mc-server.yml/dispatches" \
+            -d '{"ref":"main"}' && echo "OK 已触发下一个 run"
+          bash $OPS stop_server || true
+          echo "OK 本 run 结束，下个 run 无缝接管"
